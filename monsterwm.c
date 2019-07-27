@@ -84,17 +84,24 @@ static void change_desktop(const Arg *arg);
 static void change_monitor(const Arg *arg);
 static void client_to_desktop(const Arg *arg);
 static void client_to_monitor(const Arg *arg);
+static void focusurgent();
 static void killclient();
+static void last_desktop();
 static void move_down();
 static void move_up();
 static void moveresize(const Arg *arg);
 static void mousemotion(const Arg *arg);
 static void next_win();
 static void prev_win();
-static void quit();
+static void quit(const Arg *arg);
+static void resize_master(const Arg *arg);
+static void resize_stack(const Arg *arg);
+static void rotate(const Arg *arg);
+static void rotate_filled(const Arg *arg);
 static void spawn(const Arg *arg);
 static void swap_master();
 static void switch_mode(const Arg *arg);
+static void togglepanel();
 
 #include "config.h"
 
@@ -121,14 +128,18 @@ typedef struct Client {
 /**
  * properties of each desktop
  *
+ * masz - the size of the master area
+ * sasz - additional size of the first stack window area
  * mode - the desktop's tiling layout mode
  * head - the start of the client list
  * curr - the currently highlighted window
  * prev - the client that previously had focus
+ * sbar - the visibility status of the panel/statusbar
  */
 typedef struct {
-    int mode;
+    int mode, masz, sasz;
     Client *head, *curr, *prev;
+    Bool sbar;
 } Desktop;
 
 /**
@@ -140,7 +151,7 @@ typedef struct {
  * desktops    - the desktops handled by the monitor
  */
 typedef struct Monitor {
-    int x, y, h, w, currdeskidx;
+    int x, y, h, w, currdeskidx, prevdeskidx;
     Desktop desktops[DESKTOPS];
 } Monitor;
 
@@ -191,7 +202,7 @@ static int xerrorstart(Display *dis, XErrorEvent *ee);
  * currdeskidx  - which desktop is currently active
  */
 static Bool running = True;
-static int nmonitors, currmonidx;
+static int nmonitors, currmonidx, retval;
 static unsigned int numlockmask, win_focus, win_unfocus, win_infocus;
 static Display *dis;
 static Window root;
@@ -283,7 +294,7 @@ void buttonpress(XEvent *e) {
 void change_desktop(const Arg *arg) {
     Monitor *m = &monitors[currmonidx];
     if (arg->i == m->currdeskidx || arg->i < 0 || arg->i >= DESKTOPS) return;
-    Desktop *d = &m->desktops[m->currdeskidx], *n = &m->desktops[(m->currdeskidx = arg->i)];
+    Desktop *d = &m->desktops[(m->prevdeskidx = m->currdeskidx)], *n = &m->desktops[(m->currdeskidx = arg->i)];
     if (n->curr) XMapWindow(dis, n->curr->win);
     for (Client *c = n->head; c; c = c->next) XMapWindow(dis, c->win);
     XChangeWindowAttributes(dis, root, CWEventMask, &(XSetWindowAttributes){.do_not_propagate_mask = SubstructureNotifyMask});
@@ -639,6 +650,19 @@ void focusin(XEvent *e) {
 }
 
 /**
+ * find and focus the first client that received an urgent hint
+ * first look in the current desktop then on other desktops
+ */
+void focusurgent(void) {
+    Monitor *m = &monitors[currmonidx];
+    Client *c = NULL;
+    int d = -1;
+    for (c = m->desktops[m->currdeskidx].head; c && !c->isurgn; c = c->next);
+    while (!c && d < DESKTOPS-1) for (c = m->desktops[++d].head; c && !c->isurgn; c = c->next);
+    if (c) { if (d != -1) change_desktop(&(Arg){.i = d}); focus(c, &m->desktops[m->currdeskidx], m); }
+}
+
+/**
  * get a pixel with the requested color to
  * fill some window area (such as borders)
  */
@@ -732,6 +756,13 @@ void killclient(void) {
     if (n < 0) { XKillClient(dis, d->curr->win); removeclient(d->curr, d, m); }
     else deletewindow(d->curr->win);
     if (prot) XFree(prot);
+}
+
+/**
+ * focus the previously focused desktop
+ */
+void last_desktop(void) {
+    change_desktop(&(Arg){.i = monitors[currmonidx].prevdeskidx});
 }
 
 /**
@@ -979,7 +1010,8 @@ void propertynotify(XEvent *e) {
  * to quit just stop receiving events
  * run is stopped and control is back to main
  */
-void quit(void) {
+void quit(const Arg *arg) {
+    retval = arg->i;
     running = False;
 }
 
@@ -998,6 +1030,44 @@ void removeclient(Client *c, Desktop *d, Monitor *m) {
     if (!(c->isfloat || c->istrans) || (d->head && !d->head->next)) tile(d, m);
     free(c);
     desktopinfo();
+}
+
+/**
+ * resize the master size
+ * we should check for window size limits for both master and
+ * stack clients. the size of a window can't be less than MINWSZ
+ */
+void resize_master(const Arg *arg) {
+    Monitor *m = &monitors[currmonidx];
+    Desktop *d = &m->desktops[m->currdeskidx];
+    int msz = (d->mode == BSTACK ? m->h:m->w) * MASTER_SIZE + (d->masz += arg->i);
+    if (msz >= MINWSZ && (d->mode == BSTACK ? m->h:m->w) - msz >= MINWSZ) tile(d, m);
+    else d->masz -= arg->i; /* reset master area size */
+}
+
+/**
+ * resize the first stack window
+ */
+void resize_stack(const Arg *arg) {
+    monitors[currmonidx].desktops[monitors[currmonidx].currdeskidx].sasz += arg->i;
+    tile(&monitors[currmonidx].desktops[monitors[currmonidx].currdeskidx], &monitors[currmonidx]);
+}
+
+/**
+ * jump and focus the next or previous desktop
+ */
+void rotate(const Arg *arg) {
+    change_desktop(&(Arg){.i = (DESKTOPS + monitors[currmonidx].currdeskidx + arg->i) % DESKTOPS});
+}
+
+/**
+ * jump and focus the next non-empty desktop
+ */
+void rotate_filled(const Arg *arg) {
+    Monitor *m = &monitors[currmonidx];
+    int n = arg->i;
+    while (n < DESKTOPS && !m->desktops[(DESKTOPS + m->currdeskidx + n) % DESKTOPS].head) (n += arg->i);
+    change_desktop(&(Arg){.i = (DESKTOPS + m->currdeskidx + n) % DESKTOPS});
 }
 
 /**
@@ -1050,9 +1120,16 @@ void setup(void) {
         monitors[m] = (Monitor){ .x = info[m].x_org, .y = info[m].y_org,
                                  .w = info[m].width, .h = info[m].height };
         for (unsigned int d = 0; d < DESKTOPS; d++)
-            monitors[m].desktops[d] = (Desktop){ .mode = DEFAULT_MODE };
+            monitors[m].desktops[d] = (Desktop){ .mode = DEFAULT_MODE, .sbar = SHOW_PANEL };
     }
     XFree(info);
+
+    /* init values for each monitor and desktop */
+    for (unsigned int i = 0, m = init[0].m, d = init[0].d; i < LENGTH(init); i++, m = init[i].m, d = init[i].d) {
+        monitors[m].desktops[d].mode = init[i].dl.mode;
+        monitors[m].desktops[d].sbar = init[i].dl.sbar;
+        monitors[m].desktops[d].masz = init[i].dl.masz;
+    }
 
     /* get color for focused and unfocused client borders */
     win_focus = getcolor(FOCUS, screen);
@@ -1090,6 +1167,8 @@ void setup(void) {
     XSync(dis, False);
 
     grabkeys();
+    if (DEFAULT_DESKTOP >= 0 && DEFAULT_DESKTOP < DESKTOPS) change_desktop(&(Arg){.i = DEFAULT_DESKTOP});
+    if (DEFAULT_MONITOR >= 0 && DEFAULT_MONITOR < nmonitors) change_monitor(&(Arg){.i = DEFAULT_MONITOR});
 }
 
 void sigchld(__attribute__((unused)) int sig) {
@@ -1114,31 +1193,56 @@ void spawn(const Arg *arg) {
  */
 void stack(int x, int y, int w, int h, const Desktop *d) {
     Client *c = NULL, *t = NULL; Bool b = (d->mode == BSTACK);
-    int n = 0, p = 0, z = (b ? w:h), ma = (b ? h:w) * MASTER_SIZE;
+    int n = 0, p = 0, z = (b ? w:h), ma = (b ? h:w) * MASTER_SIZE + d->masz;
 
     /* count stack windows and grab first non-floating, non-fullscreen window */
     for (t = d->head; t; t = t->next) if (!ISFFT(t)) { if (c) ++n; else c = t; }
 
-    /* if there is only one window, it should cover the available screen space
-     * if there is only one stack window (n == 1) then we don't care about the adjustments
-     * if more than one stack windows (n > 1) on screen then adjustments may be needed
-     *   - p is the num of pixels than remain when spliting
-     *   the available width/height to the number of windows
-     *   - z is the clients' height/width
+    /* if there is only one window (c && !n), it should cover the available screen space
+     * if there is only one stack window, then we don't care about growth
+     * if more than one stack windows (n > 1) adjustments may be needed.
+     *
+     *   - p is the num of pixels than remain when spliting the
+     *       available width/height to the number of windows
+     *   - z is each client's height/width
+     *
+     *      ----------  --.    ----------------------.
+     *      |   |----| }--|--> sasz                  }--> first client will have
+     *      |   | 1s |    |                          |    z+p+sasz height/width.
+     *      | M |----|-.  }--> screen height (h)  ---'
+     *      |   | 2s | }--|--> client height (z)    two stack clients on tile mode
+     *      -----------' -'                         ::: ascii art by c00kiemon5ter
+     *
+     * what we do is, remove the sasz from the screen height/width and then
+     * divide that space with the windows on the stack so all windows have
+     * equal height/width: z = (z - sasz)/n
+     *
+     * sasz was left out (subtrackted), to later be added to the first client
+     * height/width. before we do that, there will be cases when the num of
+     * windows cannot be perfectly divided with the available screen height/width.
+     * for example: 100px scr. height, and 3 stack windows: 100/3 = 33,3333..
+     * so we get that remaining space and merge it to sasz: p = (z - sasz) % n + sasz
+     *
+     * in the end, we know each client's height/width (z), and how many pixels
+     * should be added to the first stack client (p) so that it satisfies sasz,
+     * and also, does not result in gaps created on the bottom of the screen.
      */
     if (c && !n) XMoveResizeWindow(dis, c->win, x, y, w - 2*BORDER_WIDTH, h - 2*BORDER_WIDTH);
-    if (!c || !n) return; else if (n > 1) { p = z%n; z /= n; }
+    if (!c || !n) return; else if (n > 1) { p = (z - d->sasz)%n + d->sasz; z = (z - d->sasz)/n; }
 
     /* tile the first non-floating, non-fullscreen window to cover the master area */
     if (b) XMoveResizeWindow(dis, c->win, x, y, w - 2*BORDER_WIDTH, ma - BORDER_WIDTH);
     else   XMoveResizeWindow(dis, c->win, x, y, ma - BORDER_WIDTH, h - 2*BORDER_WIDTH);
 
+    /* tile the next non-floating, non-fullscreen (and first) stack window adding p */
+    for (c = c->next; c && ISFFT(c); c = c->next);
     int cw = (b ? h:w) - 2*BORDER_WIDTH - ma, ch = z - BORDER_WIDTH;
+    if (b) XMoveResizeWindow(dis, c->win, x, y += ma, ch - BORDER_WIDTH + p, cw);
+    else   XMoveResizeWindow(dis, c->win, x += ma, y, cw, ch - BORDER_WIDTH + p);
 
-    for (x += b ? 0:ma, y += b ? ma:0, c = c->next; c; c = c->next) {
+    /* tile the rest of the non-floating, non-fullscreen stack windows */
+    for (b ? (x += ch+p):(y += ch+p), c = c->next; c; c = c->next) {
         if (ISFFT(c)) continue;
-        for (t = c->next; t && ISFFT(t); t = t->next);
-        if (!t) ch += p - BORDER_WIDTH; /* add remaining space to last window */
         if (b) { XMoveResizeWindow(dis, c->win, x, y, ch, cw); x += z; }
         else   { XMoveResizeWindow(dis, c->win, x, y, cw, ch); y += z; }
     }
@@ -1179,8 +1283,17 @@ void switch_mode(const Arg *arg) {
  */
 void tile(Desktop *d, Monitor *m) {
     if (!d->head || d->mode == FLOAT) return; /* nothing to arange */
-    layout[d->head->next ? d->mode:MONOCLE](m->x, m->y + (TOP_PANEL ? PANEL_HEIGHT:0),
-                                            m->w, m->h - (TOP_PANEL ? PANEL_HEIGHT:0), d);
+    layout[d->head->next ? d->mode:MONOCLE](m->x, m->y + (TOP_PANEL && d->sbar ? PANEL_HEIGHT:0),
+                                            m->w, m->h - (d->sbar ? PANEL_HEIGHT:0), d);
+}
+
+/**
+ * toggle visibility state of the panel/bar
+ */
+void togglepanel(void) {
+    Monitor *m = &monitors[currmonidx];
+    m->desktops[m->currdeskidx].sbar = !m->desktops[m->currdeskidx].sbar;
+    tile(&m->desktops[m->currdeskidx], m);
 }
 
 /**
@@ -1236,7 +1349,7 @@ int main(int argc, char *argv[]) {
     run();
     cleanup();
     XCloseDisplay(dis);
-    return 0;
+    return retval;
 }
 
 /* vim: set expandtab ts=4 sts=4 sw=4 : */
