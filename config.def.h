@@ -14,7 +14,7 @@
 #define SHOW_PANEL      True      /* show panel by default on exec */
 #define TOP_PANEL       True      /* False means panel is on bottom */
 #define PANEL_HEIGHT    18        /* 0 for no space for panel, thus no panel */
-#define DEFAULT_MODE    TILE      /* initial layout/mode: TILE MONOCLE BSTACK GRID FLOAT */
+#define DEFAULT_MODE    TILE      /* initial layout/mode: TILE MONOCLE BSTACK FLOAT */
 #define ATTACH_ASIDE    True      /* False means new window is master */
 #define FOLLOW_WINDOW   False     /* follow the window when moved to a different desktop */
 #define FOLLOW_MONITOR  False     /* follow the window when moved to a different monitor */
@@ -54,7 +54,6 @@ struct ml {
 static const struct ml init[] = { \
     /* monitor  desktop   mode  masz  sbar   */
     {     0,       0,   { TILE,  50,  True  } },
-    {     1,       2,   { GRID,  0,   False } },
 };
 
 /**
@@ -111,7 +110,6 @@ static Key keys[] = {
     {  MOD1|SHIFT,       XK_t,          switch_mode,       {.i = TILE}},
     {  MOD1|SHIFT,       XK_m,          switch_mode,       {.i = MONOCLE}},
     {  MOD1|SHIFT,       XK_b,          switch_mode,       {.i = BSTACK}},
-    {  MOD1|SHIFT,       XK_g,          switch_mode,       {.i = GRID}},
     {  MOD1|SHIFT,       XK_f,          switch_mode,       {.i = FLOAT}},
     {  MOD1|CONTROL,     XK_r,          quit,              {.i = 0}}, /* quit with exit value 0 */
     {  MOD1|CONTROL,     XK_q,          quit,              {.i = 1}}, /* quit with exit value 1 */
