@@ -1,11 +1,15 @@
-monsterwm
-=========
+Less Sacrilegious Window Manager
+================================
 
-→ tiny and monstrous!
+lswm
 ---------------------
 
-**monsterwm** is a minimal, lightweight, tiny but monstrous dynamic tiling window manager.
-It will try to stay as small as possible. Currently under 700 (950 after changing the formatting) lines with the config file included.
+A fork of **monsterwm**, which is a minimal, lightweight, tiny but monstrous dynamic tiling window manager.
+It will try to stay as small as possible. Currently under 700 lines with the config file included.
+
+**lswm** is under 1000 single lines of code. 
+This 300 line increase comes from improving the formatting. This makes the code readable (and removed a bug in the process)
+
 It provides a set of different layout modes (see below), including floating mode support.
 Each virtual desktop has its own properties, unaffected by other desktops' or monitors' settings.
 For [screenshots][scrot] and ramblings/updates check the [topic on ArchLinux forums][monsterwm].
