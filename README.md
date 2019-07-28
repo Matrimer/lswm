@@ -47,21 +47,6 @@ opening the window at the bottom of the stack (attach\_aside)
 
 ---
 
- *Grid tiling mode:*
-
-    -------------
-    |   |   |   |
-    |---|---|---|
-    |   |   |   |
-    |---|---|---|
-    |   |   |   |
-    -------------
-
-one can have as many windows he wants.
-`GRID` layout automatically manages the rows and columns.
-
----
-
  *Monocle mode* (aka fullscreen)
 
     -------------
