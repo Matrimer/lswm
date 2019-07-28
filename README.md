@@ -160,15 +160,11 @@ Easiest way to apply a patch, is to `git merge` that branch.
 
 Currently:
 
- * [centerwindow]   : center new floating windows on the screen and  center any window with a shortcut
  * [fibonacci]      : adds fibonacci layout mode
- * [initlayouts]    : define initial layouts for every desktop
- * [monocleborders] : adds borders to the monocle layout
- * [nmaster]        : adds nmaster layout - multiple master windows for BSTACK and TILE layouts
+ * [initlayouts]    : define initial layouts for every desktop <-- already applied
  * [rectangle]      : draws only a rectangle when moving/resizing windows to keep resources low (ie through an ssh forwarded session)
  * [showhide]       : adds a function to show and hide all windows on all desktops
  * [uselessgaps]    : adds gaps around every window on screen
- * [warpcursor]     : cursors follows and is placed in the center of the current window
  * [windowtitles]   : along with the rest desktop info, output the title of the current window
 
   [centerwindow]:   https://github.com/c00kiemon5ter/monsterwm/tree/centerwindow
@@ -204,8 +200,8 @@ Bugs
 
 For any bug or request [fill an issue][bug] on [GitHub][ghp] or report on the [ArchLinux topic][monsterwm]
 
-  [bug]: https://github.com/c00kiemon5ter/monsterwm/issues
-  [ghp]: https://github.com/c00kiemon5ter/monsterwm
+  [bug]: https://github.com/Matrimer/lswm/issues
+  [ghp]: https://github.com/Matrimer/lswm/
 
 
 License
@@ -213,7 +209,7 @@ License
 
 Licensed under MIT/X Consortium License, see [LICENSE][law] file for more copyright and license information.
 
-  [law]: https://raw.github.com/c00kiemon5ter/monsterwm/master/LICENSE
+  [law]: https://raw.github.com/Matrimer/lswm/master/LICENSE
 
 Thanks
 ------
