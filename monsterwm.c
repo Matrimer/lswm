@@ -15,11 +15,14 @@
 #include <X11/extensions/Xinerama.h>
 
 #define LENGTH(x)       (sizeof(x)/sizeof(*x))
+
+/* NICWM */
 #define CLEANMASK(mask) (mask & ~(numlockmask | LockMask))
 #define BUTTONMASK      ButtonPressMask|ButtonReleaseMask
 #define ISFFT(c)        (c->isfull || c->isfloat || c->istrans)
 #define ROOTMASK        SubstructureRedirectMask|ButtonPressMask|SubstructureNotifyMask|PropertyChangeMask
 
+/* NICWM */
 enum { RESIZE, MOVE };
 enum { TILE, MONOCLE, BSTACK, GRID, FLOAT, MODES };
 enum { WM_PROTOCOLS, WM_DELETE_WINDOW, WM_COUNT };
@@ -29,13 +32,15 @@ enum { NET_SUPPORTED, NET_FULLSCREEN, NET_WM_STATE, NET_ACTIVE, NET_COUNT };
  * argument structure to be passed to function by config.h
  * com - function pointer ~ the command to run
  * i   - an integer to indicate different states
- * v   - any type argument
+ * v   - any type argument NICWM
  */
+ 
 typedef union {
     const char** com;
     const int i;
     const void *v;
 } Arg;
+
 
 /**
  * a key struct represents a combination of
@@ -44,6 +49,7 @@ typedef union {
  * func   - the function to be triggered because of the above combo
  * arg    - the argument to the function
  */
+
 typedef struct {
     unsigned int mod;
     KeySym keysym;
@@ -51,18 +57,21 @@ typedef struct {
     const Arg arg;
 } Key;
 
+
 /**
- * a button struct represents a combination of
+ * a button struct represents a combination of IS THIS MOUSE SUPPORT?
  * mask   - a modifier mask
  * button - and the mouse button pressed
  * func   - the function to be triggered because of the above combo
  * arg    - the argument to the function
  */
+
 typedef struct {
     unsigned int mask, button;
     void (*func)(const Arg *);
     const Arg arg;
 } Button;
+
 
 /**
  * define behavior of certain applications
@@ -76,7 +85,7 @@ typedef struct {
     const char *class;
     const int monitor;
     const int desktop;
-    const Bool follow, floating;
+    const Bool follow, floating; /* FLOATING AND FOLLOW? */
 } AppRule;
 
 /* exposed function prototypes sorted alphabetically */
@@ -84,24 +93,24 @@ static void change_desktop(const Arg *arg);
 static void change_monitor(const Arg *arg);
 static void client_to_desktop(const Arg *arg);
 static void client_to_monitor(const Arg *arg);
-static void focusurgent();
+static void focusurgent(); /* NICWM - CONSIDERED FOR REMOVAL */
 static void killclient();
-static void last_desktop();
+static void last_desktop(); /* NICWM */
 static void move_down();
 static void move_up();
-static void moveresize(const Arg *arg);
-static void mousemotion(const Arg *arg);
+static void moveresize(const Arg *arg); /* NICWM */
+static void mousemotion(const Arg *arg); /* NICWM */
 static void next_win();
 static void prev_win();
 static void quit(const Arg *arg);
-static void resize_master(const Arg *arg);
-static void resize_stack(const Arg *arg);
-static void rotate(const Arg *arg);
-static void rotate_filled(const Arg *arg);
+static void resize_master(const Arg *arg); /* NICWM */
+static void resize_stack(const Arg *arg); /* NICWM */
+static void rotate(const Arg *arg); /* NICWM */
+static void rotate_filled(const Arg *arg); /* NICWM */
 static void spawn(const Arg *arg);
 static void swap_master();
-static void switch_mode(const Arg *arg); /* Needs to be altered, if layouts are removed */
-static void togglepanel();
+static void switch_mode(const Arg *arg); /* Needs to be altered, if layouts are removed, CATWM's switch_mode doesn't take any arguments */
+static void togglepanel(); /* NICWM */
 
 #include "config.h"
 
@@ -111,14 +120,15 @@ static void togglepanel();
  *
  * next    - the client after this one, or NULL if the current is the last client
  * isurgn  - set when the window received an urgent hint
- * isfull  - set when the window is fullscreen
+ * isfull  - set when the window is fullscreen THIS ONE, I WANT
  * isfloat - set when the window is floating
- * istrans - set when the window is transient
+ * istrans - set when the window is transient   WHAT IS THAT SUPPOSED TO MEAN?
  * win     - the window this client is representing
  *
  * istrans is separate from isfloat as floating windows can be reset to
  * their tiling positions, while the transients will always be floating
  */
+/* NICWM */
 typedef struct Client {
     struct Client *next;
     Bool isurgn, isfull, isfloat, istrans;
@@ -136,6 +146,7 @@ typedef struct Client {
  * prev - the client that previously had focus
  * sbar - the visibility status of the panel/statusbar
  */
+/* NICWM */
 typedef struct {
     int mode, masz, sasz;
     Client *head, *curr, *prev;
@@ -157,31 +168,31 @@ typedef struct Monitor {
 
 /* hidden function prototypes sorted alphabetically */
 static Client* addwindow(Window w, Desktop *d);
-static void buttonpress(XEvent *e);
-static void cleanup(void);
-static void clientmessage(XEvent *e);
+static void buttonpress(XEvent *e); /* NICWM? */
+static void cleanup(void); /* NICWM */
+static void clientmessage(XEvent *e); /* NICWM */
 static void configurerequest(XEvent *e); /* Note, read this function */
-static void deletewindow(Window w);
-static void desktopinfo(void);
-static void destroynotify(XEvent *e);
-static void enternotify(XEvent *e);
-static void focus(Client *c, Desktop *d, Monitor *m);
-static void focusin(XEvent *e);
+static void deletewindow(Window w); /* remove_window IS THERE */
+static void desktopinfo(void); /* NICWM */
+static void destroynotify(XEvent *e); 
+static void enternotify(XEvent *e); /* NICWM */
+static void focus(Client *c, Desktop *d, Monitor *m); /* NICWM */
+static void focusin(XEvent *e); /* NICWM */
 static unsigned long getcolor(const char* color, const int screen);
-static void grabbuttons(Client *c);
+static void grabbuttons(Client *c); /* NICWM */
 static void grabkeys(void);
 static void grid(int x, int y, int w, int h, const Desktop *d); /* Note, read this function */
 static void keypress(XEvent *e);
 static void maprequest(XEvent *e);
-static void monocle(int x, int y, int w, int h, const Desktop *d);
-static Client* prevclient(Client *c, Desktop *d);
-static void propertynotify(XEvent *e);
-static void removeclient(Client *c, Desktop *d, Monitor *m);
-static void run(void);
-static void setfullscreen(Client *c, Desktop *d, Monitor *m, Bool fullscrn);
+static void monocle(int x, int y, int w, int h, const Desktop *d); /* NICWM */
+static Client* prevclient(Client *c, Desktop *d); /* NICWM */
+static void propertynotify(XEvent *e); /* NICWM */
+static void removeclient(Client *c, Desktop *d, Monitor *m); /* remove_window IS THERE */
+static void run(void); /* start IS THERE */
+static void setfullscreen(Client *c, Desktop *d, Monitor *m, Bool fullscrn); /* NICWM */
 static void setup(void);
 static void sigchld(int sig);
-static void stack(int x, int y, int w, int h, const Desktop *d); /* Note, read this aswell. */
+static void stack(int x, int y, int w, int h, const Desktop *d); /* Note, read this aswell. */ /* NICWM */
 static void tile(Desktop *d, Monitor *m); /* And this */
 static void unmapnotify(XEvent *e);
 static Bool wintoclient(Window w, Client **c, Desktop **d, Monitor **m);
@@ -203,7 +214,7 @@ static int xerrorstart(Display *dis, XErrorEvent *ee);
  */
 static Bool running = True;
 static int nmonitors, currmonidx, retval;
-static unsigned int numlockmask, win_focus, win_unfocus, win_infocus;
+static unsigned int numlockmask, win_focus, win_unfocus, win_infocus; /* win_infocus, numlockmask are NICWM */
 static Display *dis;
 static Window root;
 static Atom wmatoms[WM_COUNT], netatoms[NET_COUNT];
@@ -265,9 +276,10 @@ Client* addwindow(Window w, Desktop *d) {
 }
 
 /**
- * on the press of a key binding (see grabkeys)
+ * on the press of a key binding (see grabkeys) REPLACE THIS WITH THE CATWM ONE?
  * call the appropriate handler
  */
+
 void buttonpress(XEvent *e) {
     Monitor *m = NULL; 
     Desktop *d = NULL; 
@@ -291,11 +303,12 @@ void buttonpress(XEvent *e) {
                 change_monitor(&(Arg){.i = cm});
             if (w && c != d->curr) 
                 focus(c, d, m);
-            buttons[i].func(&(buttons[i].arg));
+           buttons[i].func(&(buttons[i].arg));
         }
 }
 
-/**
+
+/*
  * focus another desktop
  *
  * to avoid flickering (esp. monocle mode):
@@ -759,6 +772,7 @@ unsigned long getcolor(const char* color, const int screen) {
  * calls an appropriate handler when a binding
  * occurs (see buttonpress).
  */
+
 void grabbuttons(Client *c) {
     Monitor *cm = &monitors[currmonidx];
     unsigned int b, m, modifiers[] = { 0, LockMask, numlockmask, numlockmask|LockMask };
@@ -775,6 +789,7 @@ void grabbuttons(Client *c) {
                       False, BUTTONMASK, GrabModeAsync, GrabModeAsync, None, None);
 }
 
+
 /**
  * register key bindings to be notified of
  * when they occur.
@@ -782,6 +797,7 @@ void grabbuttons(Client *c) {
  * calls an appropriate handler when a binding
  * occurs (see keypressed).
  */
+
 void grabkeys(void) {
     KeyCode code;
     XUngrabKey(dis, AnyKey, AnyModifier, root);
@@ -791,6 +807,7 @@ void grabkeys(void) {
         while ((code = XKeysymToKeycode(dis, keys[k].keysym)) && m < LENGTH(modifiers))
             XGrabKey(dis, code, keys[k].mod|modifiers[m++], root, True, GrabModeAsync, GrabModeAsync);
 }
+
 
 /**
  * grid mode / grid layout
@@ -829,6 +846,7 @@ void grid(int x, int y, int w, int h, const Desktop *d) {
  * on the press of a key binding (see grabkeys)
  * call the appropriate handler
  */
+
 void keypress(XEvent *e) {
     KeySym keysym = XkbKeycodeToKeysym(dis, e->xkey.keycode, 0, 0);
     for (unsigned int i = 0; i < LENGTH(keys); i++)
@@ -836,6 +854,7 @@ void keypress(XEvent *e) {
             if (keys[i].func)
                 keys[i].func(&keys[i].arg);
 }
+
 
 /**
  * explicitly kill the current client - close the highlighted window
@@ -951,6 +970,7 @@ void maprequest(XEvent *e) {
  * event handling is passed back to run() function.
  *
  * once a window has been moved or resized, it's marked as floating.
+ * SHOULD THIS BE REMOVED?
  */
 void mousemotion(const Arg *arg) {
     Monitor *m = &monitors[currmonidx];
@@ -1103,7 +1123,7 @@ void move_up(void) {
 }
 
 /**
- * move and resize a window with the keyboard
+ * move and resize a window with the keyboard SHOULD THIS BE REMOVED?
  */
 void moveresize(const Arg *arg) {
     Monitor *m = &monitors[currmonidx];
@@ -1304,7 +1324,9 @@ void setup(void) {
     XFree(info);
 
     /* init values for each monitor and desktop */
-    for (unsigned int i = 0, m = init[0].m, d = init[0].d; i < LENGTH(init); i++, m = init[i].m, d = init[i].d) {
+    for (unsigned int i = 0, m = init[0].m, d = init[0].d; i < LENGTH(init); i++) {
+	m = init[i].m;
+	d = init[i].d;
         monitors[m].desktops[d].mode = init[i].dl.mode;
         monitors[m].desktops[d].sbar = init[i].dl.sbar;
         monitors[m].desktops[d].masz = init[i].dl.masz;
@@ -1562,6 +1584,7 @@ int xerror(__attribute__((unused)) Display *dis, XErrorEvent *ee) {
 int xerrorstart(__attribute__((unused)) Display *dis, __attribute__((unused)) XErrorEvent *ee) {
     errx(EXIT_FAILURE, "xerror: another window manager is already running");
 }
+
 
 int main(int argc, char *argv[]) {
     if (argc == 2 && !strncmp(argv[1], "-v", 3))
