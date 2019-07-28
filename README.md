@@ -1,8 +1,6 @@
 Less Sacrilegious Window Manager
 ================================
 
-lswm
----------------------
 
 A fork of **monsterwm**, which is a minimal, lightweight, tiny but monstrous dynamic tiling window manager.
 It will try to stay as small as possible. Currently under 700 lines with the config file included.
