@@ -181,7 +181,6 @@ static void focusin(XEvent *e); /* NICWM */
 static unsigned long getcolor(const char* color, const int screen);
 static void grabbuttons(Client *c); /* NICWM */
 static void grabkeys(void);
-static void grid(int x, int y, int w, int h, const Desktop *d); /* Note, read this function */
 static void keypress(XEvent *e);
 static void maprequest(XEvent *e);
 static void monocle(int x, int y, int w, int h, const Desktop *d); /* NICWM */
@@ -244,7 +243,7 @@ static void (*events[LASTEvent])(XEvent *e) = {
  * d - the desktop to tile its clients
  */
 static void (*layout[MODES])(int x, int y, int w, int h, const Desktop *d) = {
-    [TILE] = stack, [BSTACK] = stack, [GRID] = grid, [MONOCLE] = monocle,
+    [TILE] = stack, [BSTACK] = stack, [MONOCLE] = monocle,
 };
 
 /**
@@ -808,39 +807,6 @@ void grabkeys(void) {
             XGrabKey(dis, code, keys[k].mod|modifiers[m++], root, True, GrabModeAsync, GrabModeAsync);
 }
 
-
-/**
- * grid mode / grid layout
- * arrange windows in a grid aka fair
- */
-void grid(int x, int y, int w, int h, const Desktop *d) {
-    int n = 0, cols = 0, cn = 0, rn = 0, i = -1;
-    for (Client *c = d->head; c; c = c->next)
-        if (!ISFFT(c)) ++n;
-    
-    /* emulate square root */
-    for (cols = 0; cols <= n/2; cols++)
-        if (cols*cols >= n) break;
-    
-    if (n == 0)
-        return;
-    else if (n == 5)
-        cols = 2;
-
-    int rows = n/cols, ch = h - BORDER_WIDTH, cw = (w - BORDER_WIDTH)/(cols ? cols:1);
-    for (Client *c = d->head; c; c = c->next) {
-        if (ISFFT(c))
-            continue;
-        else ++i;
-        if (i/rows + 1 > cols - n%cols)
-            rows = n/cols + 1;
-        XMoveResizeWindow(dis, c->win, x + cn*cw, y + rn*ch/rows, cw - BORDER_WIDTH, ch/rows - BORDER_WIDTH);
-        if (++rn >= rows) {
-            rn = 0;
-            cn++;
-        }
-    }
-}
 
 /**
  * on the press of a key binding (see grabkeys)
