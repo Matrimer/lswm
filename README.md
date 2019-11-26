@@ -1,6 +1,7 @@
-Less Sacrilegious Window Manager
+(Less) Sacrilegious Window Manager - unmaintained
 ================================
 
+**Read through the code again, it is very sacrilegious and riddled with bugs. You may want to stay away.**
 
 A fork of **monsterwm**, which is a minimal, lightweight, tiny but monstrous dynamic tiling window manager.
 It will try to stay as small as possible. Currently under 700 lines with the config file included.
